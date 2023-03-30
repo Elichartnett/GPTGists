@@ -1,0 +1,95 @@
+//
+//  ContentView.swift
+//  TextField
+//
+//  Created by Eli Hartnett on 3/30/23.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    @State private var phoneNumber: String? = nil
+
+    var body: some View {
+        VStack {
+            FormattedTextField("Type a phone number", value: $phoneNumber, formatter: PhoneNumberFormatStyle())
+                .padding()
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+
+            Text("Formatted phone number: \(phoneNumber ?? "nil")")
+                .padding()
+        }
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct FormattedTextField<T: Hashable & LosslessStringConvertible>: View {
+    @Binding var value: T?
+    let placeholder: String
+    let formatter: PhoneNumberFormatStyle
+    let onCommit: () -> Void
+
+    init(_ placeholder: String, value: Binding<T?>, formatter: PhoneNumberFormatStyle, onCommit: @escaping () -> Void = {}) {
+        self._value = value
+        self.placeholder = placeholder
+        self.formatter = formatter
+        self.onCommit = onCommit
+    }
+
+    var body: some View {
+        TextField(placeholder, text: textBinding, onCommit: onCommit)
+            .onChange(of: value) { _ in
+                formatValue()
+            }
+    }
+
+    private var textBinding: Binding<String> {
+        Binding(
+            get: { value.map { formatter.print($0 as! String) } ?? "" },
+            set: { newText in
+                if let parsedValue = formatter.parse(newText) {
+                    value = parsedValue as? T
+                } else {
+                    value = nil
+                }
+            }
+        )
+    }
+
+    private func formatValue() {
+        if let currentValue = value {
+            let formattedString = formatter.print(currentValue as! String)
+            if let parsedValue = formatter.parse(formattedString) {
+                value = parsedValue as? T
+            }
+        }
+    }
+}
+
+struct PhoneNumberFormatStyle {
+    func print(_ value: String) -> String {
+        let digits = value.filter { $0.isNumber }
+
+        var formattedString = ""
+        for (index, digit) in digits.enumerated() {
+            if index == 0 {
+                formattedString += "("
+            } else if index == 3 {
+                formattedString += ") "
+            } else if index == 6 {
+                formattedString += "-"
+            }
+            formattedString += String(digit)
+        }
+        return formattedString
+    }
+
+    func parse(_ text: String) -> String? {
+        return text.filter { $0.isNumber }
+    }
+}
