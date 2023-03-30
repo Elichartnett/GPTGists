@@ -1,0 +1,106 @@
+//
+//  ContentView.swift
+//  TextField
+//
+//  Created by Eli Hartnett on 3/30/23.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    @State private var phoneNumber: String? = nil
+
+    var body: some View {
+        VStack {
+            FormattedTextField("Type a phone number", value: $phoneNumber, formatter: PhoneNumberFormatter())
+                .padding()
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+
+            Text("Formatted phone number: \(phoneNumber ?? "nil")")
+                .padding()
+        }
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct FormattedTextField<T: Hashable>: View {
+    @Binding var value: T?
+    let placeholder: String
+    let formatter: PhoneNumberFormatter
+    let onCommit: () -> Void
+
+    init(_ placeholder: String, value: Binding<T?>, formatter: PhoneNumberFormatter, onCommit: @escaping () -> Void = {}) {
+        self._value = value
+        self.placeholder = placeholder
+        self.formatter = formatter
+        self.onCommit = onCommit
+    }
+
+    var body: some View {
+        HStack {
+            TextField(placeholder, text: textBinding, onCommit: onCommit)
+                .onChange(of: value) { _ in
+                    formatValue()
+                }
+            
+            Image(systemName: "x.circle")
+                .onTapGesture {
+                    value = nil
+                }
+        }
+    }
+
+    private var textBinding: Binding<String> {
+        Binding(
+            get: { value.flatMap { formatter.string(for: $0) } ?? "" },
+            set: { newText in
+                let objectValue = formatter.stringToObjectValue(newText)
+                if !objectValue.isEmpty {
+                    value = objectValue as? T
+                } else {
+                    value = nil
+                }
+            }
+        )
+    }
+
+    private func formatValue() {
+        if let formattedString = value.flatMap({ formatter.string(for: $0) }) {
+            let objectValue = formatter.stringToObjectValue(formattedString)
+            if !objectValue.isEmpty {
+                value = objectValue as? T
+            } else {
+                value = nil
+            }
+        }
+    }
+}
+
+class PhoneNumberFormatter: Formatter {
+    override func string(for obj: Any?) -> String? {
+        guard let phoneNumber = obj as? String else { return nil }
+        let digits = phoneNumber.filter { $0.isNumber }
+
+        var formattedString = ""
+        for (index, digit) in digits.enumerated() {
+            if index == 0 {
+                formattedString += "("
+            } else if index == 3 {
+                formattedString += ") "
+            } else if index == 6 {
+                formattedString += "-"
+            }
+            formattedString += String(digit)
+        }
+        return formattedString
+    }
+    
+    func stringToObjectValue(_ string: String) -> String {
+        return string.filter { $0.isNumber }
+    }
+}
