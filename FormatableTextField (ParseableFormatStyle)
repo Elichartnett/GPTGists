@@ -1,0 +1,51 @@
+//
+//  ContentView.swift
+//  Text
+//
+//  Created by Eli Hartnett on 3/30/23.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    @State var gridBlockSize = 0
+    var body: some View {
+
+        TextField("", value: $gridBlockSize, format: .ranged(1...100))
+            .padding()
+            .background {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(.primary)
+            }
+            .padding()
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct RangeIntegerStrategy: ParseStrategy {
+    func parse(_ value: String) throws -> Int {
+        return Int(value) ?? 1
+    }
+}
+
+struct RangeIntegerStyle: ParseableFormatStyle {
+
+    var parseStrategy: RangeIntegerStrategy = .init()
+    let range: ClosedRange<Int>
+
+    func format(_ value: Int) -> String {
+        let constrainedValue = min(max(value, range.lowerBound), range.upperBound)
+        return "\(constrainedValue)"
+    }
+}
+
+extension FormatStyle where Self == RangeIntegerStyle {
+    static func ranged(_ range: ClosedRange<Int>) -> RangeIntegerStyle {
+        return RangeIntegerStyle(range: range)
+    }
+}
