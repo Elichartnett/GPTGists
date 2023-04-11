@@ -1,0 +1,117 @@
+//
+//  ContentView.swift
+//  PieChart
+//
+//  Created by Eli Hartnett on 4/11/23.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    private let data = [25.0, 25.0, 20.0, 20.0, 5.0, 5.0]
+    private let colors: [Color] = [.blue, .cyan, .green, .yellow, .red, .purple]
+    
+    var body: some View {
+        PieChart(
+            data: data,
+            colors: colors,
+            borderColor: .white,
+            borderWidth: 2.0
+        )
+        .frame(width: 200, height: 200)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.gray)
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct PieSlice: Shape {
+    let startAngle: Angle
+    let endAngle: Angle
+    
+    let innerRadiusFactor: CGFloat = 1.4
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        let innerRadius = radius * innerRadiusFactor
+
+        path.addArc(center: center,
+                    radius: radius,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    clockwise: false)
+
+        path.addLine(to:
+                        CGPoint(x: center.x + innerRadius * (cos(endAngle.radians)),
+                                y: center.y + innerRadius * sin(endAngle.radians)))
+
+        path.addArc(center: center,
+                    radius: innerRadius,
+                    startAngle: endAngle,
+                    endAngle: startAngle,
+                    clockwise: true)
+
+        path.addLine(to:
+                        CGPoint(x: center.x + radius * (cos(startAngle.radians)),
+                                y: center.y + radius * sin(startAngle.radians)))
+
+        return path
+    }
+}
+
+struct PieChartSector: View {
+    let startAngle: Angle
+    let endAngle: Angle
+    let fillColor: Color
+    let borderColor: Color
+    let borderWidth: CGFloat
+    
+    var body: some View {
+        PieSlice(startAngle: startAngle, endAngle: endAngle)
+            .fill(fillColor)
+            .overlay(
+                PieSlice(startAngle: startAngle, endAngle: endAngle)
+                    .stroke(borderColor, lineWidth: borderWidth)
+            )
+    }
+}
+
+struct PieChart: View {
+    let data: [Double]
+    let colors: [Color]
+    let borderColor: Color
+    let borderWidth: CGFloat
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(data.indices) { index in
+                    let startAngle = angleForIndex(index)
+                    let endAngle = angleForIndex(index + 1)
+                    
+                    PieChartSector(
+                        startAngle: startAngle,
+                        endAngle: endAngle,
+                        fillColor: colors[index % colors.count],
+                        borderColor: borderColor,
+                        borderWidth: borderWidth
+                    )
+                }
+            }
+            .rotationEffect(Angle(degrees: -90))
+        }
+    }
+    
+    private func angleForIndex(_ index: Int) -> Angle {
+        let sum = data.reduce(0, +)
+        let value = data.prefix(index).reduce(0, +) / sum
+        return Angle(degrees: 360 * value)
+    }
+}
