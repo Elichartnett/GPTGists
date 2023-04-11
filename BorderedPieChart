@@ -1,0 +1,104 @@
+//
+//  ContentView.swift
+//  PieChart
+//
+//  Created by Eli Hartnett on 4/11/23.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    private let data = [30.0, 20.0, 50.0]
+    private let colors: [Color] = [.red, .green, .blue]
+    
+    var body: some View {
+        PieChart(
+            data: data,
+            colors: colors,
+            borderColor: .white,
+            borderWidth: 2.0
+        )
+        .frame(width: 200, height: 200)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct PieSlice: Shape {
+    let startAngle: Angle
+    let endAngle: Angle
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        
+        path.move(to: center)
+        
+        path.addArc(center: center,
+                    radius: radius,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    clockwise: false)
+        
+        path.closeSubpath()
+        
+        return path
+    }
+}
+
+struct PieChartSector: View {
+    let startAngle: Angle
+    let endAngle: Angle
+    let fillColor: Color
+    let borderColor: Color
+    let borderWidth: CGFloat
+    
+    var body: some View {
+        PieSlice(startAngle: startAngle, endAngle: endAngle)
+            .fill(fillColor)
+            .overlay(
+                PieSlice(startAngle: startAngle, endAngle: endAngle)
+                    .stroke(borderColor, lineWidth: borderWidth)
+            )
+    }
+}
+
+struct PieChart: View {
+    let data: [Double]
+    let colors: [Color]
+    let borderColor: Color
+    let borderWidth: CGFloat
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(data.indices) { index in
+                    let startAngle = angleForIndex(index)
+                    let endAngle = angleForIndex(index + 1)
+                    
+                    PieChartSector(
+                        startAngle: startAngle,
+                        endAngle: endAngle,
+                        fillColor: colors[index % colors.count],
+                        borderColor: borderColor,
+                        borderWidth: borderWidth
+                    )
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+        }
+    }
+    
+    private func angleForIndex(_ index: Int) -> Angle {
+        let sum = data.reduce(0, +)
+        let value = data.prefix(index).reduce(0, +) / sum
+        return Angle(degrees: 360 * value)
+    }
+}
