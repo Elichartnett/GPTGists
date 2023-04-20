@@ -1,0 +1,37 @@
+class LoadingSpinner {
+    private var isSpinning = false
+    private let spinnerChars = ["|", "/", "-", "\\"]
+    private var currentCharIndex = 0
+
+    func start() {
+        guard !isSpinning else { return }
+
+        isSpinning = true
+        DispatchQueue.global(qos: .background).async {
+            while self.isSpinning {
+                DispatchQueue.main.async {
+                    print("\r\(self.spinnerChars[self.currentCharIndex])", terminator: "")
+                    fflush(stdout)
+                }
+                self.currentCharIndex = (self.currentCharIndex + 1) % self.spinnerChars.count
+                usleep(100000) // Sleep for 100 ms
+            }
+        }
+    }
+
+    func stop() {
+        isSpinning = false
+    }
+}
+
+// Usage:
+let spinner = LoadingSpinner()
+spinner.start()
+
+// Simulate a task that takes 5 seconds to complete
+DispatchQueue.global().asyncAfter(deadline: .now() + 5.0) {
+    spinner.stop()
+    print("\nTask completed!")
+}
+
+RunLoop.main.run(until: Date().addingTimeInterval(10))
