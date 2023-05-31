@@ -1,0 +1,30 @@
+import pexpect
+
+command = 'read -r -p "input: " input && ' \
+          'echo $input && ' \
+          'echo started ' \
+          'and now sleeping 1 && ' \
+          'sleep 1 && echo now reading && ' \
+          'echo now sleeping 1 && ' \
+          'sleep 1 && ' \
+          'echo done'
+child = pexpect.spawn('/bin/bash', ['-c', command])
+
+# Wait for one of the possible prompts
+prompts = ['input: ', 'other_prompt: ', 'yet_another_prompt: ']
+index = child.expect(prompts)
+
+if index < len(prompts):
+    # Print child output up to the prompt
+    print("Output before prompt:", child.before.decode())
+
+    user_input = input(prompts[index])
+    child.sendline(user_input)
+
+    # Print child output as it's produced
+    while child.isalive():
+        line = child.readline().decode().strip()  # Read line from output
+        if line:  # If line is not empty
+            print("Output:", line)
+
+print("Child process has finished")
