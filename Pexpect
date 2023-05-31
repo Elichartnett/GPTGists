@@ -1,20 +1,38 @@
+import sys
+import urllib.parse
+
 import pexpect
+
+class OutputWrapper:
+    def __init__(self, verbose: bool):
+        self.output = ""
+        self.verbose = verbose
+
+    def write(self, s):
+        decoded_string = s.decode('utf-8')
+        self.output += decoded_string
+        if self.verbose:
+            print(decoded_string, end='')
+
+    def flush(self):
+        sys.stdout.flush()
 
 command = 'xcodes download 14.3'
 child = pexpect.spawn('/bin/bash', ['-c', command])
+child.timeout = 60 * 30
+output = OutputWrapper(verbose=True)
+child.logfile = output
 
 # Wait for one of the possible prompts
-prompts = ['Apple ID:', 'Apple ID Password:', 'Enter "sms" without quotes to exit this prompt and choose a phone number to send an SMS security code to.\nEnter the 6 digit code from one of your trusted devices']
+prompts = ['Apple ID:', 'Apple ID Password:', 'Enter the 6 digit code from one of your trusted devices']
 
 try:
     while True:
         index = child.expect(prompts + [pexpect.EOF, pexpect.TIMEOUT])
 
         if index < len(prompts):
-            # Print child output up to the prompt
-            print("Output before prompt:", child.before.decode())
-
-            user_input = input(prompts[index])
+            # The child process has received a prompt.
+            user_input = input()
             child.sendline(user_input)
         else:
             # The child process has finished or timeout occurred
@@ -26,4 +44,4 @@ except pexpect.exceptions.TIMEOUT:
 except Exception as e:
     print("Unexpected error: ", e)
 
-print("Child process has finished")
+print(f"finished with: {output.output}")
