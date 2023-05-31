@@ -1,30 +1,29 @@
 import pexpect
 
-command = 'read -r -p "input: " input && ' \
-          'echo $input && ' \
-          'echo started ' \
-          'and now sleeping 1 && ' \
-          'sleep 1 && echo now reading && ' \
-          'echo now sleeping 1 && ' \
-          'sleep 1 && ' \
-          'echo done'
+command = 'xcodes download 14.3'
 child = pexpect.spawn('/bin/bash', ['-c', command])
 
 # Wait for one of the possible prompts
-prompts = ['input: ', 'other_prompt: ', 'yet_another_prompt: ']
-index = child.expect(prompts)
+prompts = ['Apple ID:', 'Apple ID Password:', 'Enter "sms" without quotes to exit this prompt and choose a phone number to send an SMS security code to.\nEnter the 6 digit code from one of your trusted devices']
 
-if index < len(prompts):
-    # Print child output up to the prompt
-    print("Output before prompt:", child.before.decode())
+try:
+    while True:
+        index = child.expect(prompts + [pexpect.EOF, pexpect.TIMEOUT])
 
-    user_input = input(prompts[index])
-    child.sendline(user_input)
+        if index < len(prompts):
+            # Print child output up to the prompt
+            print("Output before prompt:", child.before.decode())
 
-    # Print child output as it's produced
-    while child.isalive():
-        line = child.readline().decode().strip()  # Read line from output
-        if line:  # If line is not empty
-            print("Output:", line)
+            user_input = input(prompts[index])
+            child.sendline(user_input)
+        else:
+            # The child process has finished or timeout occurred
+            break
+except pexpect.exceptions.EOF:
+    print("End of File. Probably the child process has finished")
+except pexpect.exceptions.TIMEOUT:
+    print("Timeout")
+except Exception as e:
+    print("Unexpected error: ", e)
 
 print("Child process has finished")
