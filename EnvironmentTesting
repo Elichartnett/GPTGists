@@ -1,0 +1,32 @@
+import SwiftUI
+
+struct ContentView: View {
+    @Environment(\.locale) var locale
+    // Add more @Environment properties as needed
+
+    var body: some View {
+        VStack {
+            Text("Locale: \(locale.identifier)")
+            // Display more environment properties as needed
+        }
+        .onAppear {
+            printAllEnvironmentValues()
+        }
+    }
+
+    private func printAllEnvironmentValues() {
+        let mirror = Mirror(reflecting: EnvironmentValues())
+
+        for child in mirror.children {
+            if let value = child.value as? CustomStringConvertible {
+                print("\(child.label ?? ""): \(value)")
+            }
+        }
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
