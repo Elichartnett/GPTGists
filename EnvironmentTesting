@@ -1,27 +1,28 @@
-import SwiftUI
-
 struct ContentView: View {
     @Environment(\.locale) var locale
-    // Add more @Environment properties as needed
 
     var body: some View {
         VStack {
             Text("Locale: \(locale.identifier)")
-            // Display more environment properties as needed
         }
-        .onAppear {
-            printAllEnvironmentValues()
-        }
+        .environmentPrinter()
     }
+}
 
-    private func printAllEnvironmentValues() {
-        let mirror = Mirror(reflecting: EnvironmentValues())
+struct EnvironmentPrinter: ViewModifier {
+    @Environment(\.locale) var locale
 
-        for child in mirror.children {
-            if let value = child.value as? CustomStringConvertible {
-                print("\(child.label ?? ""): \(value)")
-            }
+    func body(content: Content) -> some View {
+        DispatchQueue.main.async {
+            print("Locale: \(locale.identifier)")
         }
+        return content
+    }
+}
+
+extension View {
+    func environmentPrinter() -> some View {
+        modifier(EnvironmentPrinter())
     }
 }
 
