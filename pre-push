@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# This hook script enforces a regex pattern for branch names
+
+branch_name_pattern="^a[0-9]{6}/[A-Z]-[0-9]-[a-zA-Z-]+$"
+
+current_branch=$(git symbolic-ref --short HEAD)
+
+# Check if the branch name matches the pattern
+if ! [[ $current_branch =~ $branch_name_pattern ]]; then
+    echo "Aborting push. Current branch name '$current_branch' must follow $branch_name_pattern"
+    exit 1
+fi
