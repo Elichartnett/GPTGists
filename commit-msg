@@ -1,0 +1,10 @@
+#!/bin/sh
+
+commit_msg=$(cat "$1")
+required_prefix="$(git symbolic-ref --short HEAD): "
+
+# Check if the commit message starts with the required prefix
+if ! echo "$commit_msg" | grep -q "^$required_prefix"; then
+    echo "Aborting commit. Commit message must start with '$required_prefix'"
+    exit 1
+fi
