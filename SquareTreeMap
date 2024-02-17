@@ -1,0 +1,87 @@
+//
+//  ContentView.swift
+//  SquareTreeMap
+//
+//  Created by Eli Hartnett on 2/17/24.
+//
+
+import SwiftUI
+
+struct ContentView: View {
+    @State var stocks: [Stock] = [
+        Stock(name: "Apple", marketCap: 1000, priceChangePercent: 3),
+        Stock(name: "Microsoft", marketCap: 200, priceChangePercent: 2),
+        Stock(name: "Nvidia", marketCap: 500, priceChangePercent: 0.5),
+        Stock(name: "Tesla", marketCap: 200, priceChangePercent: 1),
+        Stock(name: "Amazon", marketCap: 800, priceChangePercent: -0.8),
+        Stock(name: "Alpabet", marketCap: 100, priceChangePercent: -5)
+    ]
+    
+    var body: some View {
+        GeometryReader { proxy in
+            
+            ForEach(stocks) { stock in
+                Rectangle()
+                    .fill(computeColor(priceChangePercent: stock.priceChangePercent))
+                    .frame(width: stock.position.width, height: stock.position.height)
+                    .border(.black)
+                    .overlay { Text(stock.name) }
+                    .offset(x: stock.position.minX, y: stock.position.minY)
+            }
+            .onAppear {
+                stocks = computeTreeMap(in: CGRect(origin: .zero, size: proxy.size), for: stocks)
+            }
+        }
+    }
+    
+    private func computeColor(priceChangePercent: Double) -> Color {
+        if priceChangePercent > 0 {
+            return .green.opacity(priceChangePercent / 3)
+        } else {
+            return .red.opacity((-1 * priceChangePercent) / 3)
+        }
+    }
+    
+    private func computeTreeMap(in rect: CGRect, for stocks: [Stock]) -> [Stock] {
+        var localStocks = [Stock]()
+        var remainingRect = rect
+        var remainingStocks = stocks.sorted(by: { $0.marketCap > $1.marketCap })
+        var marketCapSum = remainingStocks.map { $0.marketCap }.reduce(0, +)
+        
+        while !remainingStocks.isEmpty {
+            let stock = remainingStocks.removeFirst()
+            let marketCap = stock.marketCap
+            let fraction = marketCap / marketCapSum
+            
+            if remainingRect.width >= remainingRect.height {
+                let width = remainingRect.width * CGFloat(fraction)
+                let frame = CGRect(x: remainingRect.minX, y: remainingRect.minY, width: width, height: remainingRect.height)
+                localStocks.append(.init(name: stock.name, marketCap: stock.marketCap, priceChangePercent: stock.priceChangePercent, position: frame))
+                remainingRect.origin.x += width
+                remainingRect.size.width -= width
+            } else {
+                let height = remainingRect.height * CGFloat(fraction)
+                let frame = CGRect(x: remainingRect.minX, y: remainingRect.minY, width: remainingRect.width, height: height)
+                localStocks.append(.init(name: stock.name, marketCap: stock.marketCap, priceChangePercent: stock.priceChangePercent, position: frame))
+                remainingRect.origin.y += height
+                remainingRect.size.height -= height
+            }
+            
+            marketCapSum -= marketCap
+        }
+        
+        return localStocks
+    }
+}
+
+#Preview {
+    ContentView()
+}
+
+struct Stock: Identifiable {
+    let id: UUID = .init()
+    let name: String
+    let marketCap: Double
+    let priceChangePercent: Double
+    var position: CGRect = .zero
+}
