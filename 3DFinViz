@@ -1,0 +1,164 @@
+//
+//  ContentView.swift
+//  Volume
+//
+//  Created by Eli Hartnett on 2/17/24.
+//
+
+import SwiftUI
+import RealityKit
+
+struct ContentView: View {
+    
+    @State var stocks: [Stock] = [
+        Stock(name: "Apple", marketCap: 1000, priceChangePercent: 3),
+        Stock(name: "Microsoft", marketCap: 200, priceChangePercent: 2),
+        Stock(name: "Nvidia", marketCap: 500, priceChangePercent: 0.5),
+        Stock(name: "Tesla", marketCap: 200, priceChangePercent: 1),
+        Stock(name: "Amazon", marketCap: 500, priceChangePercent: -0.8),
+        Stock(name: "Alpabet", marketCap: 100, priceChangePercent: -5)
+    ]
+    
+    
+    var body: some View {
+        GeometryReader3D { proxy3D in
+            RealityView { content in
+                print("SwiftUICoordinateSpace: \(proxy3D.size)")
+                
+                let convertedSize = content.convert(proxy3D.frame(in: .local), from: .local, to: content)
+                let minX = CGFloat(convertedSize.min.x / 2)
+                let maxX = CGFloat(convertedSize.max.x / 2)
+                let minY = CGFloat(convertedSize.min.y / 2)
+                let maxY = CGFloat(convertedSize.max.y / 2)
+                print("RealityKitCoordinateSpace - minX: \(minX), maxX: \(maxX), minY: \(minY), maxY: \(maxY)")
+                
+                stocks = computeTreeMap(minX: minX, maxX: maxX, minY: minY, maxY: maxY, for: stocks)
+                for stock in stocks {
+                    let cubeWidth = Float(stock.position.width)
+                    let cubeHeight = Float(stock.position.height)
+                    print("cubeWidth: \(cubeWidth)")
+                    print("cubeHeight: \(cubeHeight)")
+                    
+                    let depth = Float.random(in: 0...0.5)
+                    let cube: Entity = ModelEntity(mesh: .generateBox(width: cubeWidth, height: cubeHeight, depth: depth), materials: [SimpleMaterial(color: UIColor.init(computeColor(priceChangePercent: stock.priceChangePercent)), isMetallic: false)])
+                    
+                    let cubePositionX = Float(stock.position.midX)
+                    let cubePositionY = Float(-stock.position.midY)
+                    print("cubePositionX: \(cubePositionX)")
+                    print("cubePositionY: \(cubePositionY)")
+                    
+                    cube.position.x = cubePositionX
+                    cube.position.y = cubePositionY
+                    cube.position.z = -0.3
+                    
+                    content.add(cube)
+                }
+                
+                let debug = false
+                if debug {
+                    let cube1: Entity = ModelEntity(mesh: .generateBox(width: 0.05, height: 0.05, depth: 0.05), materials: [SimpleMaterial.init(color: .white, isMetallic: true)])
+                    cube1.position.x = 0
+                    cube1.position.y = 0
+                    cube1.position.z = 0.1
+                    content.add(cube1)
+                    
+                    let cube2: Entity = ModelEntity(mesh: .generateBox(width: 0.05, height: 0.05, depth: 0.05), materials: [SimpleMaterial.init(color: .red, isMetallic: true)])
+                    cube2.position.x = Float(minX)
+                    cube2.position.y = Float(minY)
+                    cube2.position.z = 0.1
+                    content.add(cube2)
+                    
+                    let cube3: Entity = ModelEntity(mesh: .generateBox(width: 0.05, height: 0.05, depth: 0.05), materials: [SimpleMaterial.init(color: .blue, isMetallic: true)])
+                    cube3.position.x = Float(maxX)
+                    cube3.position.y = Float(minY)
+                    cube3.position.z = 0.1
+                    content.add(cube3)
+                    
+                    let cube4: Entity = ModelEntity(mesh: .generateBox(width: 0.05, height: 0.05, depth: 0.05), materials: [SimpleMaterial.init(color: .purple, isMetallic: true)])
+                    cube4.position.x = Float(minX)
+                    cube4.position.y = Float(maxY)
+                    cube4.position.z = 0.1
+                    content.add(cube4)
+                    
+                    let cube5: Entity = ModelEntity(mesh: .generateBox(width: 0.05, height: 0.05, depth: 0.05), materials: [SimpleMaterial.init(color: .yellow, isMetallic: true)])
+                    cube5.position.x = Float(maxX)
+                    cube5.position.y = Float(maxY)
+                    cube5.position.z = 0.1
+                    content.add(cube5)
+                    
+                    print("Red: \(cube2.position)")
+                    print("Blue: \(cube3.position)")
+                    print("Purple: \(cube4.position)")
+                    print("Yellow: \(cube5.position)")
+                }
+            }
+            
+            //                        ForEach(stocks) { stock in
+            //                            Rectangle()
+            //                                .fill(computeColor(priceChangePercent: stock.priceChangePercent))
+            //                                .frame(width: stock.position.width, height: stock.position.height)
+            //                                .border(.black)
+            //                                .overlay { Text(stock.name) }
+            //                                .offset(x: stock.position.minX, y: stock.position.minY)
+            //                        }
+            //                        .onAppear {
+            //                            stocks = computeTreeMap(minX: 0, maxX: proxy3D.size.width / 2, minY: 0, maxY: proxy3D.size.height / 2, for: stocks)
+            //                        }
+        }
+    }
+    
+    
+    private func computeColor(priceChangePercent: Double) -> Color {
+        let cap: Double = 3
+        let opacity: Double = priceChangePercent / cap
+        if priceChangePercent > 0 {
+            return .green.opacity(1)
+        } else {
+            return .red.opacity(1)
+        }
+    }
+    
+    private func computeTreeMap(minX: CGFloat, maxX: CGFloat, minY: CGFloat, maxY: CGFloat, for stocks: [Stock]) -> [Stock] {
+        let rect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        var localStocks = [Stock]()
+        var remainingRect = rect
+        var remainingStocks = stocks.sorted(by: { $0.marketCap > $1.marketCap })
+        var marketCapSum = remainingStocks.map { $0.marketCap }.reduce(0, +)
+        
+        while !remainingStocks.isEmpty {
+            let stock = remainingStocks.removeFirst()
+            let marketCap = stock.marketCap
+            let fraction = marketCap / marketCapSum
+            
+            if remainingRect.width >= remainingRect.height {
+                let width = remainingRect.width * CGFloat(fraction)
+                let frame = CGRect(x: remainingRect.minX, y: remainingRect.minY, width: width, height: remainingRect.height)
+                localStocks.append(.init(name: stock.name, marketCap: stock.marketCap, priceChangePercent: stock.priceChangePercent, position: frame))
+                remainingRect.origin.x += width
+                remainingRect.size.width -= width
+            } else {
+                let height = remainingRect.height * CGFloat(fraction)
+                let frame = CGRect(x: remainingRect.minX, y: remainingRect.minY, width: remainingRect.width, height: height)
+                localStocks.append(.init(name: stock.name, marketCap: stock.marketCap, priceChangePercent: stock.priceChangePercent, position: frame))
+                remainingRect.origin.y += height
+                remainingRect.size.height -= height
+            }
+            
+            marketCapSum -= marketCap
+        }
+        
+        return localStocks
+    }
+}
+
+#Preview(windowStyle: .volumetric) {
+    ContentView()
+}
+
+struct Stock: Identifiable {
+    let id: UUID = .init()
+    let name: String
+    let marketCap: Double
+    let priceChangePercent: Double
+    var position: CGRect = .zero
+}
