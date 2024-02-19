@@ -1,0 +1,32 @@
+//
+//  ContentView.swift
+//  OutlinedEntity
+//
+//  Created by Eli Hartnett on 2/18/24.
+//
+
+import SwiftUI
+import RealityKit
+
+struct ContentView: View {
+    
+    var body: some View {
+        RealityView { content in
+            var material = PhysicallyBasedMaterial()
+            material.emissiveColor.color = .white
+            material.emissiveIntensity = 0.5
+            material.faceCulling = .front
+            
+            let cube = ModelEntity(mesh: .generateBox(size: 0.1), materials: [SimpleMaterial.init(color: .red, isMetallic: false)])
+            
+            let cube2 = ModelEntity(mesh: .generateBox(size: 0.1 * 1.02), materials: [material])
+            
+            content.add(cube)
+            content.add(cube2)
+        }
+    }
+}
+
+#Preview(windowStyle: .volumetric) {
+    ContentView()
+}
