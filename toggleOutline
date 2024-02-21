@@ -1,0 +1,57 @@
+import SwiftUI
+import RealityKit
+
+struct ImmersiveView: View {
+    
+    @State var cube = Entity()
+    
+    var body: some View {
+        RealityView { content in
+            let new: ModelEntity = .init(mesh: .generateBox(size: 0.1), materials: [SimpleMaterial.init(color: .green, isMetallic: false)], collisionShape: .generateBox(size: SIMD3<Float>(repeating: 0.5)), mass: 0.0)
+            new.components[InputTargetComponent.self] = .init()
+            new.components[PhysicsBodyComponent.self] = .init(shapes: new.collision?.shapes ?? [], mass: 0.0, material: nil, mode: .dynamic)
+            new.position = SIMD3(x: 0, y: 1.5, z: -0.5)
+            new.name = "cube"
+            cube = new
+            content.add(new)
+            
+            
+            let new2: ModelEntity = .init(mesh: .generateBox(size: 0.1), materials: [SimpleMaterial.init(color: .green, isMetallic: false)], collisionShape: .generateBox(size: SIMD3<Float>(repeating: 0.5)), mass: 0.0)
+            new2.components[InputTargetComponent.self] = .init()
+            new2.components[PhysicsBodyComponent.self] = .init(shapes: new2.collision?.shapes ?? [], mass: 0.0, material: nil, mode: .dynamic)
+            new2.position = SIMD3(x: -0.5, y: 1.5, z: -0.5)
+            new2.name = "cube2"
+            content.add(new2)
+        }
+        .gesture(
+            SpatialTapGesture()
+                .targetedToEntity(cube)
+                .onEnded { value in
+                    toggleOutline(entity: value.entity)
+                }
+        )
+    }
+    
+    func toggleOutline(entity: Entity) {
+        guard let _entity = entity as? ModelEntity else { return }
+        
+        if let _border = _entity.children.first(where: { entity in
+            entity.name == "border"
+        }) as? ModelEntity {
+            entity.removeChild(_border)
+        } else {
+            var material = PhysicallyBasedMaterial()
+            material.emissiveColor.color = .white
+            material.emissiveIntensity = 1
+            material.faceCulling = .front
+            let border: ModelEntity = .init(mesh: .generateBox(size: 0.1 * 1.02), materials: [material])
+            border.name = "border"
+            entity.addChild(border)
+        }
+    }
+}
+
+#Preview {
+    ImmersiveView()
+        .previewLayout(.sizeThatFits)
+}
